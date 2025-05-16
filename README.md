@@ -370,33 +370,6 @@ flowchart TD
     end
 ```
 
-### Request Flow
-```mermaid
-sequenceDiagram
-    participant User
-    participant ALB
-    participant Auth
-    participant Search
-    participant ImageService
-    participant Cache
-    participant Storage
-
-    User->>ALB: Query Request
-    ALB->>Auth: Validate Token
-    Auth-->>ALB: Token Valid
-    ALB->>Search: Process Query
-    Search-->>ALB: Image Metadata
-    ALB->>ImageService: Fetch Image
-    ImageService->>Cache: Check Cache
-    alt Image in Cache
-        Cache-->>ImageService: Return Image
-    else Image not in Cache
-        ImageService->>Storage: Fetch Image
-        Storage-->>ImageService: Return Image
-        ImageService->>Cache: Store in Cache
-    end
-    ImageService-->>ALB: Return Image
-```
 
 ## 4. Storage Layer Enhancement
 
@@ -610,30 +583,30 @@ flowchart TD
 ```
 
 ### Cost Management Components
-1. **Storage Optimization**
-   - S3 Lifecycle Policies
-   - Intelligent Tiering
-   - Storage class analysis
-   - Automatic archival
+1. **Compute Optimization**
+   - Spot Instances for non-critical workloads
+   - Reserved Instances for baseline capacity
+   - Auto Scaling Groups for dynamic scaling
+   - Fargate for serverless containers
 
-2. **Compute Optimization**
-   - Auto Scaling Groups
-   - Spot Instance usage
-   - Reserved Instance planning
-   - Resource right-sizing
+2. **Storage Optimization**
+   - DynamoDB auto-scaling and on-demand capacity
+   - EBS volume optimization and lifecycle management
+   - RDS storage optimization and automated scaling
+   - Redis Cache optimization with proper sizing
+   - Elasticsearch instance type optimization
 
-### Cost Control Strategies
-1. **Resource Management**
-   - Utilization monitoring
-   - Cost allocation tags
-   - Budget alerts
-   - Usage analytics
+3. **Network Optimization**
+   - CloudFront caching optimization
+   - Route 53 latency-based routing
+   - VPC endpoint usage for AWS services
+   - Proper NAT Gateway sizing
 
-2. **Performance Optimization**
-   - Cache utilization
-   - Query optimization
-   - Traffic management
-   - Resource scheduling
+4. **Database Optimization**
+   - DynamoDB read/write capacity optimization
+   - RDS instance type selection
+   - Multi-AZ deployment for critical workloads
+   - Read replicas for scaling read operations
 
 ## Our Game Plan
 Here's how we'll tackle this transformation:
