@@ -58,11 +58,11 @@ graph TD
     Client[Web/Mobile Clients]
     API[API Gateway/Load Balancer]
     EC2[Single EC2 Instance]
-    S3[S3 Storage]
+    DDB[DynamoDB Storage]
     
     Client --> API
     API --> EC2
-    EC2 --> S3
+    EC2 --> DDB
     
     subgraph "Monolith Components"
         EC2 --> Auth[Authentication]
@@ -78,8 +78,8 @@ graph TD
 ### What We Have Now
 Here's what we're working with:
 - Everything runs on one EC2 instance (yes, really!)
-- We've got a basic API Gateway/Load Balancer handling traffic
-- S3 takes care of our image storage
+- We've got a basic Load Balancer handling traffic
+- DynamoDB takes care of our data storage
 - Our monolithic app includes:
   - Authentication system
   - Image ingestion service
@@ -407,7 +407,7 @@ flowchart TD
 ### Data Storage Architecture
 ```mermaid
 flowchart TD
-    subgraph DataStorage["Data Storage Layer"]
+    subgraph StorageLayer["Storage Layer"]
         subgraph Primary["Primary Region"]
             DDBPrimary["DynamoDB (Metadata)"]
             ESPrimary["Elasticsearch (Search Index)"]
@@ -421,6 +421,8 @@ flowchart TD
         end
         
         ImageIngest["Image Ingest Service"] --> DDBPrimary
+        SearchService["Search Service"] --> ESPrimary
+        ImageServing["Image Serving Service"] --> DDBPrimary
         IndexingService["Indexing Service"] --> ESPrimary
         DDBPrimary <--> DDBDR
         ESPrimary <--> ESDR
@@ -428,22 +430,63 @@ flowchart TD
     end
 ```
 
-#### Storage Components
-1. **Object Storage (S3)**
-   - Raw image storage
+### Storage Components
+1. **Data Storage (DynamoDB)**
+   - Metadata storage
    - Cross-region replication
-   - Lifecycle management
-   - Intelligent tiering
-
-2. **Metadata Store (DynamoDB)**
-   - Global tables for replication
    - Auto-scaling
    - Point-in-time recovery
 
-3. **Search Engine (OpenSearch)**
+2. **Search Engine (Elasticsearch)**
    - Full-text search
    - Analytics capabilities
    - Cross-region replication
+
+3. **Caching Layer (Redis)**
+   - Session management
+   - Frequently accessed data
+   - Real-time analytics
+   - Pub/sub messaging
+
+### Cost Optimization
+```mermaid
+flowchart TD
+    subgraph CostOptimization["Cost Optimization"]
+        DDBLifeCycle["DynamoDB Auto-scaling"]
+        AutoScaling["Auto Scaling Groups"]
+        CacheOptimization["Redis Cache Optimization"]
+        
+        DDBPrimary["DynamoDB Primary"] --> DDBLifeCycle
+        ServiceMesh["Service Mesh"] --> AutoScaling
+        DDBPrimary --> CacheOptimization
+    end
+```
+
+### Cost Management Components
+1. **Storage Optimization**
+   - DynamoDB auto-scaling
+   - Redis Cache optimization
+   - EBS volume optimization
+   - RDS storage optimization
+
+2. **Compute Optimization**
+   - Auto Scaling Groups
+   - Spot Instance usage
+   - Reserved Instance planning
+   - Resource right-sizing
+
+### Cost Control Strategies
+1. **Resource Management**
+   - Utilization monitoring
+   - Cost allocation tags
+   - Budget alerts
+   - Usage analytics
+
+2. **Performance Optimization**
+   - Cache utilization
+   - Query optimization
+   - Traffic management
+   - Resource scheduling
 
 ## 5. Container Orchestration
 
@@ -572,41 +615,41 @@ flowchart TD
 ```mermaid
 flowchart TD
     subgraph CostOptimization["Cost Optimization"]
-        S3LifeCycle["S3 Lifecycle Policies"]
+        DDBLifeCycle["DynamoDB Auto-scaling"]
         AutoScaling["Auto Scaling Groups"]
-        S3Intelligence["S3 Intelligence Tiering"]
+        CacheOptimization["Redis Cache Optimization"]
         
-        S3Primary["S3 Primary"] --> S3LifeCycle
+        DDBPrimary["DynamoDB Primary"] --> DDBLifeCycle
         ServiceMesh["Service Mesh"] --> AutoScaling
-        S3Primary --> S3Intelligence
+        DDBPrimary --> CacheOptimization
     end
 ```
 
 ### Cost Management Components
-1. **Compute Optimization**
-   - Spot Instances for non-critical workloads
-   - Reserved Instances for baseline capacity
-   - Auto Scaling Groups for dynamic scaling
-   - Fargate for serverless containers
+1. **Storage Optimization**
+   - DynamoDB auto-scaling
+   - Redis Cache optimization
+   - EBS volume optimization
+   - RDS storage optimization
 
-2. **Storage Optimization**
-   - DynamoDB auto-scaling and on-demand capacity
-   - EBS volume optimization and lifecycle management
-   - RDS storage optimization and automated scaling
-   - Redis Cache optimization with proper sizing
-   - Elasticsearch instance type optimization
+2. **Compute Optimization**
+   - Auto Scaling Groups
+   - Spot Instance usage
+   - Reserved Instance planning
+   - Resource right-sizing
 
-3. **Network Optimization**
-   - CloudFront caching optimization
-   - Route 53 latency-based routing
-   - VPC endpoint usage for AWS services
-   - Proper NAT Gateway sizing
+### Cost Control Strategies
+1. **Resource Management**
+   - Utilization monitoring
+   - Cost allocation tags
+   - Budget alerts
+   - Usage analytics
 
-4. **Database Optimization**
-   - DynamoDB read/write capacity optimization
-   - RDS instance type selection
-   - Multi-AZ deployment for critical workloads
-   - Read replicas for scaling read operations
+2. **Performance Optimization**
+   - Cache utilization
+   - Query optimization
+   - Traffic management
+   - Resource scheduling
 
 ## Our Game Plan
 Here's how we'll tackle this transformation:
