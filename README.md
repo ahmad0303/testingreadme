@@ -242,36 +242,52 @@ sequenceDiagram
 ```
 
 ### Service Communication Architecture
-Our service communication architecture follows a hybrid approach:
-
-1. **Direct Service-to-Service Communication**
-   - Services communicate directly when latency is critical
-   - Used for synchronous operations
-   - Implemented using gRPC for high performance
-
-2. **Event-Driven Communication**
-   - Amazon EventBridge for event routing
-   - SQS for message queuing
-   - SNS for pub/sub patterns
-   - Used for asynchronous operations
-
-3. **Service Mesh**
-   - Traffic management
-   - Service discovery
-   - Load balancing
-   - Circuit breaking
-   - Retry policies
-
-4. **Load Balancer (for external access)**
-   - Rate limiting
-   - Request validation
-   - Health checks
-   - Traffic distribution
-
-### Data Storage Architecture
 ```mermaid
 flowchart TD
+    Users["Global Users (50M)"] --> Route53["Route 53 Global DNS"]
+    Route53 --> CDN("CloudFront CDN")
+    CDN --> ALB["Application Load Balancer"]
+    
+    subgraph Auth["Authentication Layer"]
+        ALB --> AuthService["Authentication Service (Cognito)"]
+        AuthService --> IAM["Identity & Access Management"]
+        AuthService --> SecretsManager["AWS Secrets Manager"]
+    end
+    
+    subgraph ApplicationLayer["Microservices"]
+        direction TB
+        subgraph EKSCluster["Amazon EKS Cluster"]
+            subgraph ServiceMesh["Service Mesh"]
+                ImageIngest["Image Ingest Service"]
+                SearchService["Search Service"]
+                ImageServing["Image Serving Service"]
+                IndexingService["Indexing Service"]
+            end
+            
+            subgraph EKSComponents["EKS Components"]
+                NodeGroups["Managed Node Groups"]
+                FargateProfiles["Fargate Profiles"]
+                HPA["Horizontal Pod Autoscaler"]
+                CA["Cluster Autoscaler"]
+            end
+        end
+        
+        AuthService --> ServiceMesh
+        EKSComponents --> ServiceMesh
+    end
+    
+    subgraph CacheLayer["Caching Layer"]
+        ElastiCache["ElastiCache Redis"]
+        CloudFrontCache["CloudFront Cache"]
+        DAXCache["DynamoDB DAX"]
+        
+        ImageServing --> ElastiCache
+        SearchService --> ElastiCache
+        CDN --> CloudFrontCache
+    end
+    
     subgraph DataStorage["Data Storage Layer"]
+        direction TB
         subgraph Primary["Primary Region"]
             DDBPrimary["DynamoDB (Metadata)"]
             ESPrimary["Elasticsearch (Search Index)"]
@@ -284,148 +300,103 @@ flowchart TD
             CacheDR["Redis Cache Replica"]
         end
         
-        ImageIngest["Image Ingest Service"] --> DDBPrimary
-        IndexingService["Indexing Service"] --> ESPrimary
+        ImageIngest --> DDBPrimary
+        SearchService --> ESPrimary
+        ImageServing --> DDBPrimary
+        IndexingService --> ESPrimary
         DDBPrimary <--> DDBDR
         ESPrimary <--> ESDR
         CachePrimary <--> CacheDR
     end
 ```
 
-### Network Layer Architecture
+### Microservices Architecture
 ```mermaid
-flowchart TD
-    subgraph NetworkArchitecture["Multi-Region Network Architecture"]
-        subgraph Region1["Primary Region"]
-            subgraph PublicSubnet1["Public Subnet"]
-                ALB1["Application Load Balancer"]
-                NAT1["NAT Gateway"]
-            end
-            
-            subgraph PrivateSubnet1["Private Subnet"]
-                EKS1["EKS Cluster"]
-                RDS1["RDS Instance"]
-            end
-        end
-        
-        subgraph Region2["Secondary Region"]
-            subgraph PublicSubnet2["Public Subnet"]
-                ALB2["Application Load Balancer"]
-                NAT2["NAT Gateway"]
-            end
-            
-            subgraph PrivateSubnet2["Private Subnet"]
-                EKS2["EKS Cluster"]
-                RDS2["RDS Instance"]
-            end
-        end
-        
-        Route53["Route 53"] --> ALB1
-        Route53 --> ALB2
-        ALB1 --> EKS1
-        ALB2 --> EKS2
+graph TD
+    subgraph "Modernized Architecture"
+    Client[Web/Mobile Clients]
+    CDN[Global CDN]
+    ALB[Application Load Balancer]
+    
+    subgraph "Services"
+        Auth[Auth Service]
+        Search[Search Service]
+        Ingest[Image Ingest Service]
+        Serve[Image Serving Service]
+        Index[Indexing Service]
+    end
+    
+    subgraph "Storage"
+        ES[Elasticsearch]
+        Cache[Redis Cache]
+        DDB[DynamoDB]
+    end
+    
+    Client --> CDN
+    CDN --> ALB
+    ALB --> Auth
+    ALB --> Search
+    ALB --> Serve
+    ALB --> Ingest
+    ALB --> Index
+    
+    Search --> ES
+    Serve --> Cache
+    Serve --> DDB
+    Ingest --> DDB
+    Index --> ES
+    Auth --> DDB
+    Search --> DDB
     end
 ```
 
-### Database Recommendations
-1. **Primary Database (RDS)**
-   - PostgreSQL for relational data
-   - Multi-AZ deployment
-   - Read replicas for scaling
-   - Automated backups
+### EKS Cluster Architecture
+```mermaid
+flowchart TD
+    subgraph EKSCluster["Amazon EKS Cluster"]
+        subgraph ServiceMesh["Service Mesh"]
+            ImageIngest["Image Ingest Service"]
+            SearchService["Search Service"]
+            ImageServing["Image Serving Service"]
+            IndexingService["Indexing Service"]
+        end
+        
+        subgraph EKSComponents["EKS Components"]
+            NodeGroups["Managed Node Groups"]
+            FargateProfiles["Fargate Profiles"]
+            HPA["Horizontal Pod Autoscaler"]
+            CA["Cluster Autoscaler"]
+        end
+    end
+```
 
-2. **Hot Storage**
-   - ElastiCache Redis for caching
-   - DynamoDB for key-value storage
-   - RDS for relational data
+### Request Flow
+```mermaid
+sequenceDiagram
+    participant User
+    participant ALB
+    participant Auth
+    participant Search
+    participant ImageService
+    participant Cache
+    participant Storage
 
-### Security Implementation
-1. **Data Protection**
-   - Amazon Macie for sensitive data discovery
-   - KMS for encryption key management
-   - AWS Certificate Manager for SSL/TLS
-   - AWS Secrets Manager for secrets
-
-2. **Encryption**
-   - At Rest:
-     - RDS: Transparent data encryption
-     - EBS: Volume encryption
-     - DynamoDB: Table encryption
-   
-   - In Transit:
-     - TLS 1.2+ for all communications
-     - VPC endpoints for AWS services
-     - PrivateLink for third-party services
-
-### Cost Optimization
-1. **Compute Optimization**
-   - Spot Instances for non-critical workloads
-   - Reserved Instances for baseline capacity
-   - Auto Scaling Groups for dynamic scaling
-   - Fargate for serverless containers
-
-2. **Storage Optimization**
-   - DynamoDB auto-scaling
-   - EBS volume optimization
-   - RDS storage optimization
-
-### Service Mesh vs Istio
-We chose Service Mesh over Istio for the following reasons:
-1. Native AWS integration
-2. Simpler management
-3. Lower operational overhead
-4. Better cost efficiency
-5. AWS support and maintenance
-
-### EKS Components
-The listed EKS components are our planned implementation:
-1. **Node Groups**
-   - Managed node groups for worker nodes
-   - Spot instances for cost optimization
-   - On-demand instances for critical workloads
-
-2. **Fargate Profiles**
-   - Serverless compute for containers
-   - Automatic scaling
-   - Pay-per-use pricing
-
-3. **Scaling Components**
-   - Horizontal Pod Autoscaler
-   - Cluster Autoscaler
-   - Vertical Pod Autoscaler
-
-### Ruby on Rails Considerations
-For a Ruby on Rails application:
-1. **Containerization**
-   - Multi-stage Docker builds
-   - Asset precompilation in build
-   - Environment-specific configurations
-
-2. **Database**
-   - PostgreSQL on RDS
-   - Redis for caching
-   - Sidekiq for background jobs
-
-3. **Deployment**
-   - Zero-downtime deployments
-   - Database migrations strategy
-   - Asset pipeline optimization
-
-### Scaling Strategy
-1. **Load Balancer Level**
-   - ALB in each region
-   - Cross-zone load balancing
-   - Health checks and failover
-
-2. **Route 53**
-   - Latency-based routing
-   - Health checks
-   - Failover routing
-
-3. **Service Duplication**
-   - DynamoDB Global Tables
-   - RDS Read Replicas
-   - Redis Cache Replication
+    User->>ALB: Query Request
+    ALB->>Auth: Validate Token
+    Auth-->>ALB: Token Valid
+    ALB->>Search: Process Query
+    Search-->>ALB: Image Metadata
+    ALB->>ImageService: Fetch Image
+    ImageService->>Cache: Check Cache
+    alt Image in Cache
+        Cache-->>ImageService: Return Image
+    else Image not in Cache
+        ImageService->>Storage: Fetch Image
+        Storage-->>ImageService: Return Image
+        ImageService->>Cache: Store in Cache
+    end
+    ImageService-->>ALB: Return Image
+```
 
 ## 4. Storage Layer Enhancement
 
