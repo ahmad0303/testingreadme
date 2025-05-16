@@ -771,14 +771,118 @@ Here's how our devs get in:
 ## Additional Considerations
 
 ### Service Mesh vs Istio
+We chose Service Mesh over Istio for the following reasons:
+1. Native AWS integration
+2. Simpler management
+3. Lower operational overhead
+4. Better cost efficiency
+5. AWS support and maintenance
 
 ### EKS Components
+The listed EKS components are our planned implementation:
+1. **Node Groups**
+   - Managed node groups for worker nodes
+   - Spot instances for cost optimization
+   - On-demand instances for critical workloads
+
+2. **Fargate Profiles**
+   - Serverless compute for containers
+   - Automatic scaling
+   - Pay-per-use pricing
+
+3. **Scaling Components**
+   - Horizontal Pod Autoscaler
+   - Cluster Autoscaler
+   - Vertical Pod Autoscaler
 
 ### Ruby on Rails Considerations
+For a Ruby on Rails application:
+1. **Containerization**
+   - Multi-stage Docker builds
+   - Asset precompilation in build
+   - Environment-specific configurations
+
+2. **Database**
+   - PostgreSQL on RDS
+   - Redis for caching
+   - Sidekiq for background jobs
+
+3. **Deployment**
+   - Zero-downtime deployments
+   - Database migrations strategy
+   - Asset pipeline optimization
 
 ### Scaling Strategy
+1. **Load Balancer Level**
+   - ALB in each region
+   - Cross-zone load balancing
+   - Health checks and failover
+
+2. **Route 53**
+   - Latency-based routing
+   - Health checks
+   - Failover routing
+
+3. **Service Duplication**
+   - DynamoDB Global Tables
+   - RDS Read Replicas
+   - Redis Cache Replication
 
 ### Network Architecture
+```mermaid
+flowchart TD
+    subgraph NetworkArchitecture["Multi-Region Network Architecture"]
+        subgraph Region1["Primary Region"]
+            subgraph PublicSubnet1["Public Subnet"]
+                ALB1["Application Load Balancer"]
+                NAT1["NAT Gateway"]
+            end
+            
+            subgraph PrivateSubnet1["Private Subnet"]
+                EKS1["EKS Cluster"]
+                RDS1["RDS Instance"]
+            end
+        end
+        
+        subgraph Region2["Secondary Region"]
+            subgraph PublicSubnet2["Public Subnet"]
+                ALB2["Application Load Balancer"]
+                NAT2["NAT Gateway"]
+            end
+            
+            subgraph PrivateSubnet2["Private Subnet"]
+                EKS2["EKS Cluster"]
+                RDS2["RDS Instance"]
+            end
+        end
+        
+        Route53["Route 53"] --> ALB1
+        Route53 --> ALB2
+        ALB1 --> EKS1
+        ALB2 --> EKS2
+    end
+```
 
 ### Database Recommendations
+1. **Primary Database (RDS)**
+   - PostgreSQL for relational data
+   - Multi-AZ deployment
+   - Read replicas for scaling
+   - Automated backups
+
+2. **Hot Storage**
+   - ElastiCache Redis for caching
+   - DynamoDB for key-value storage
+   - RDS for relational data
+
+3. **Data Replication**
+   - DynamoDB Global Tables for multi-region
+   - RDS Read Replicas for read scaling
+   - Redis Cache replication for high availability
+
+4. **Backup Strategy**
+   - Automated RDS snapshots
+   - DynamoDB point-in-time recovery
+   - Redis backup and restore
+   - Cross-region replication
 
