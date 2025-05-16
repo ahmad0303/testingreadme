@@ -37,6 +37,14 @@ Hey there! This document walks you through our system's evolution from a single-
    - [Developer Access](#6-developer-access-made-safe)
    - [Storage Optimization](#7-smart-storage-happy-wallet)
 
+7. [Additional Considerations](#additional-considerations)
+   - [Service Mesh vs Istio](#service-mesh-vs-istio)
+   - [EKS Components](#eks-components)
+   - [Ruby on Rails Considerations](#ruby-on-rails-considerations)
+   - [Scaling Strategy](#scaling-strategy)
+   - [Network Architecture](#network-layer-architecture)
+   - [Database Recommendations](#database-recommendations)
+
 ---
 
 ## 1. Where We Started
@@ -815,4 +823,18 @@ Here's how our devs get in:
    - Image compression on upload
    - Text compression for logs
    - Database compression
+
+## Additional Considerations
+
+### Service Mesh vs Istio
+
+### EKS Components
+
+### Ruby on Rails Considerations
+
+### Scaling Strategy
+
+### Network Architecture
+
+### Database Recommendations
 
